@@ -6,34 +6,42 @@
 library(MCMCglmm)
 library(tidyr)
 
-df=read.csv("~/LH_Neuroptera.csv")
+df=read.csv("LH_Neuroptera_red.csv") %>%
+  mutate(temp = as.numeric(temp),
+         Dev_1st_inst = as.numeric(Dev_1st_inst),
+         Dev_2nd_inst = as.numeric(Dev_2nd_inst),
+         Dev_3rd_inst = as.numeric(Dev_3rd_inst),
+         Dev_.P = as.numeric(Dev_.P))
 
-sub_noNA=na.omit(df[,c(2,7,8,33:36)])
 
 mean.temp=24
 sd.temp=3.84
 
+
+sub_noNA=na.omit(df[,c(2,4,9,10,35:38)])
+
 sub_noNA$temp=as.numeric(scale(sub_noNA$temp))
 
-sub_noNA=sub_noNA[sub_noNA$vivo_situ%in%"in_situ",-2]
+sub_noNA=sub_noNA[sub_noNA$vivo_situ%in%"in_situ",-3]
 
 sub_noNA=sub_noNA[sub_noNA$Dev_1st_inst>0,]
 sub_noNA=sub_noNA[sub_noNA$Dev_.P>0,]
-sub_noNA[,3:6]=log(sub_noNA[,3:6])
+sub_noNA[,4:7]=log(sub_noNA[,4:7])
 
 prior = list(R = list(V = diag(4)/5, n = 4, nu=0.002),
-             G = list(G1 = list(V = diag(4)/5, n = 4, nu=0.002)))
+             G = list(G1 = list(V = diag(4)/5, n = 4, nu=0.002),
+                      G2 = list(V = diag(2)/5, n = 4, nu=0.002)))
 
 m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
 m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
 m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
 library(coda)

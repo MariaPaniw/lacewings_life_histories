@@ -6,23 +6,28 @@
 #############################   Load necessary packages
 library(MCMCglmm)
 library(tidyr)
+library(dplyr)
 library(ggplot2)
 library(viridis)
 library(hdrcde)
 
 ###########################   Data preparation 
 
-df=read.csv("~/LH_Neuroptera.csv")
+df=read.csv("LH_Neuroptera_red.csv") %>%
+  mutate(temp = as.numeric(temp),
+         L_surv = as.numeric(L_surv),
+         M_sex_rep_rate_M = as.numeric(M_sex_rep_rate_M))
 
 
-sub_noNA=na.omit(df[,c(2,8,37,56)])
+sub_noNA=na.omit(df[,c(2,4,10,39,58)])
+
 nrow(sub_noNA)
 
 # Values necessary to back-transform scaled temperatures for plotting
 mean.temp=25.05
 sd.temp=3.80
 
-sub_noNA$temp=as.numeric(scale(sub_noNA$temp))
+sub_noNA$temp=scale(as.numeric(sub_noNA$temp))
 sub_noNA$temp2=sub_noNA$temp^2
 
 sub_noNA$L_surv=asin(sqrt(sub_noNA$L_surv/100))
@@ -34,18 +39,19 @@ nrow(sub_noNA)
 
 ###########################   MCMC analyses
 prior = list(R = list(V = diag(2)/3, n = 2, nu=0.002),
-             G = list(G1 = list(V = diag(2)/3, n = 2, nu=0.002)))
+             G = list(G1 = list(V = diag(2)/3, n = 2, nu=0.002),
+                      G2 = list(V = diag(2)/3, n = 2, nu=0.002)))
 
 m1=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
 m2=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
 m3=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
 library(coda)

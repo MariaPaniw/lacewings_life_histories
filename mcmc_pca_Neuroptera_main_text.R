@@ -12,10 +12,16 @@ library(hdrcde)
 
 ###########################   Data perparation 
 
-df=read.csv("~/LH_Neuroptera.csv")
+df=read.csv("LH_Neuroptera_red.csv")%>%
+  mutate(temp = as.numeric(temp),Dev_1st_inst = as.numeric(Dev_1st_inst),
+         Dev_2nd_inst = as.numeric(Dev_2nd_inst),
+         Dev_3rd_inst = as.numeric(Dev_3rd_inst),
+         Dev_.P = as.numeric(Dev_.P),
+         L_surv = as.numeric(L_surv),
+         M_sex_rep_rate_M = as.numeric(M_sex_rep_rate_M))
 
 # subset to the columns of interest
-sub_noNA=na.omit(df[,c(2,8,33:36,56,37)])
+sub_noNA=na.omit(df[,c(2,4,10,35:38,58,39)])
 
 # Values necessary to back-transform scaled temperatures for plotting
 mean.temp=25.1569
@@ -31,25 +37,26 @@ sub_noNA$L_surv=asin(sqrt(sub_noNA$L_surv/100)) # arcsin transformation of survi
 
 nrow(sub_noNA) # final sample size
 
-sub_noNA[,3:7]=log(sub_noNA[,3:7])
+sub_noNA[,4:8]=log(sub_noNA[,4:8])
 
 sub_noNA$temp2=sub_noNA$temp^2
 
 ###########################   MCMC analyses
 
 prior = list(R = list(V = diag(6)/7, n = 6, nu=0.002),
-             G = list(G1 = list(V = diag(6)/7, n = 6, nu=0.002)))
+             G = list(G1 = list(V = diag(6)/7, n = 6, nu=0.002),
+                      G2 = list(V = diag(2)/7, n = 6, nu=0.002)))
 
 m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
 m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
 m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
 library(coda)
