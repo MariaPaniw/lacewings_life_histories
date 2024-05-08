@@ -1,50 +1,52 @@
 # Supporting Material S2
 # Analyses for Comparative life-history responses of lacewings to changes in temperature
-# created by Maria Paniw
-# last modified: 04-11-2023
+# created by Maria Paniw, adapted by Sanne Evers
+# last modified: 08/05/2024
 
 library(MCMCglmm)
 library(tidyr)
+library(dplyr)
+library(coda)
 
-df=read.csv("LH_Neuroptera_red.csv") %>%
+df=read.csv("data/LH_Neuroptera_red.csv") %>%
   mutate(temp = as.numeric(temp),
          Dev_1st_inst = as.numeric(Dev_1st_inst),
          Dev_2nd_inst = as.numeric(Dev_2nd_inst),
          Dev_3rd_inst = as.numeric(Dev_3rd_inst),
-         Dev_.P = as.numeric(Dev_.P))
+         Dev_.P = as.numeric(Dev_.P)) 
 
 
 mean.temp=24
 sd.temp=3.84
 
 
-sub_noNA=na.omit(df[,c(2,4,9,10,35:38)])
+sub_noNA=na.omit(df[,c('St_ID', 'sp.', 'vivo_situ', "Types_of_Lit_Sources", 'temp', 'Latitude', 'Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')])
 
 sub_noNA$temp=as.numeric(scale(sub_noNA$temp))
+sub_noNA$Latitude=as.numeric(scale(sub_noNA$Latitude))
 
 sub_noNA=sub_noNA[sub_noNA$vivo_situ%in%"in_situ",-3]
 
 sub_noNA=sub_noNA[sub_noNA$Dev_1st_inst>0,]
 sub_noNA=sub_noNA[sub_noNA$Dev_.P>0,]
-sub_noNA[,4:7]=log(sub_noNA[,4:7])
+sub_noNA[,7:10]=log(sub_noNA[,7:10])
 
 prior = list(R = list(V = diag(4)/5, n = 4, nu=0.002),
              G = list(G1 = list(V = diag(4)/5, n = 4, nu=0.002),
                       G2 = list(V = diag(2)/5, n = 4, nu=0.002)))
 
-m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp,
+m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude + trait:Types_of_Lit_Sources,
             random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
-m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp,
-            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
+m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude + trait:Types_of_Lit_Sources,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
-m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp,
-            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
+m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude + trait:Types_of_Lit_Sources,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
-library(coda)
 
 # Plot main (fixed) effects
 
@@ -127,4 +129,6 @@ p.temp=ggplot(pred.data, aes(temp, dev))+
 
 
 p.temp
+
+ggsave(filename = "results/plot_dev_in_vivo.pdf",plot=p.temp,width = 12,height = 6)
 
