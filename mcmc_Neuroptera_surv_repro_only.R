@@ -6,24 +6,30 @@
 #############################   Load necessary packages
 library(MCMCglmm)
 library(tidyr)
+library(dplyr)
 library(ggplot2)
 library(viridis)
 library(hdrcde)
+library(coda)
 
 ###########################   Data preparation 
 
-df=read.csv("~/LH_Neuroptera.csv")
+df=read.csv("data/LH_Neuroptera_red.csv") %>%
+  mutate(temp = as.numeric(temp),
+         L_surv = as.numeric(L_surv),
+         M_sex_rep_rate_M = as.numeric(M_sex_rep_rate_M))
 
 
-sub_noNA=na.omit(df[,c(2,8,37,56)])
-nrow(sub_noNA)
+sub_noNA=na.omit(df[,c('St_ID', 'sp.', 'temp', 'Latitude', "L_surv", "M_sex_rep_rate_M", "Types_of_Lit_Sources")])
 
 # Values necessary to back-transform scaled temperatures for plotting
 mean.temp=25.05
 sd.temp=3.80
 
-sub_noNA$temp=as.numeric(scale(sub_noNA$temp))
+sub_noNA$temp=scale(as.numeric(sub_noNA$temp))
 sub_noNA$temp2=sub_noNA$temp^2
+
+sub_noNA$Latitude=scale(as.numeric(sub_noNA$Latitude))
 
 sub_noNA$L_surv=asin(sqrt(sub_noNA$L_surv/100))
 sub_noNA=sub_noNA[sub_noNA$M_sex_rep_rate_M>0,]
@@ -34,21 +40,21 @@ nrow(sub_noNA)
 
 ###########################   MCMC analyses
 prior = list(R = list(V = diag(2)/3, n = 2, nu=0.002),
-             G = list(G1 = list(V = diag(2)/3, n = 2, nu=0.002)))
+             G = list(G1 = list(V = diag(2)/3, n = 2, nu=0.002),
+                      G2 = list(V = diag(2)/3, n = 2, nu=0.002)))
 
-m1=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
+m1=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2 + trait:Latitude + trait:Types_of_Lit_Sources,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-m2=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
+m2=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2 + trait:Latitude + trait:Types_of_Lit_Sources,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-m3=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
+m3=MCMCglmm(cbind(L_surv,M_sex_rep_rate_M)~trait+trait:temp+trait:temp2 + trait:Latitude + trait:Types_of_Lit_Sources,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 2), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-library(coda)
 
 
 param.coda.fixed=mcmc.list(list(mcmc(m1$Sol),mcmc(m2$Sol),mcmc(m3$Sol)))
@@ -128,7 +134,7 @@ p.temp=ggplot(pred.data, aes(temp, dev))+
 p.temp
 
 
-ggsave(filename = "/Users/maria/Dropbox/collaborations/UA Carpathians/Hanna/project/plots/plot_temp_resp_surv_only_V2.pdf",plot=p.temp,width = 12,height = 6)
+ggsave(filename = "results/plot_temp_resp_surv_only_V2.pdf",plot=p.temp,width = 12,height = 6)
 
 
 #covariance
@@ -151,9 +157,9 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.res),mcmc(m2.sub.res),mcmc(m3.sub.res)
 library(MCMCvis)
 
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro",wd="results/")
 
-pdf("~/FigS2.6b.pdf",width=6,height=7)
+pdf("results/FigS2.6b.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
 
@@ -170,9 +176,9 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.sp),mcmc(m2.sub.sp),mcmc(m3.sub.sp)))
 
 #### species covariance: 
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro_sp",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro_sp",wd="results/")
 
-pdf("~/FigS.2.6a.pdf",width=6,height=7)
+pdf("results/FigS.2.6a.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
 
@@ -189,7 +195,7 @@ colnames(m1.sub)=colnames(m2.sub)=colnames(m3.sub)=c("S PA - S PA","S PA - Repro
 
 param.coda.vcv=mcmc.list(list(mcmc(m1.sub),mcmc(m2.sub),mcmc(m3.sub)))
 
-pdf("~/cov_Pexplained_surv_repro.pdf",width=6,height=7)
+pdf("results/cov_Pexplained_surv_repro.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="% species-specific covariance",xlim = c(0,1))
 
