@@ -29,21 +29,21 @@ sub_noNA=sub_noNA[sub_noNA$vivo_situ%in%"in_situ",-3]
 
 sub_noNA=sub_noNA[sub_noNA$Dev_1st_inst>0,]
 sub_noNA=sub_noNA[sub_noNA$Dev_.P>0,]
-sub_noNA[,7:10]=log(sub_noNA[,7:10])
+sub_noNA[,c('Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')]=log(sub_noNA[,c('Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')])
 
 prior = list(R = list(V = diag(4)/5, n = 4, nu=0.002),
              G = list(G1 = list(V = diag(4)/5, n = 4, nu=0.002),
                       G2 = list(V = diag(2)/5, n = 4, nu=0.002)))
 
-m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude + trait:Types_of_Lit_Sources,
+m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude,
             random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
-m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude + trait:Types_of_Lit_Sources,
+m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude,
             random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 
-m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude + trait:Types_of_Lit_Sources,
+m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait:temp + trait:Latitude,
             random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 100000, burnin = 50000,
             pr=F,thin=25, data = sub_noNA)
 

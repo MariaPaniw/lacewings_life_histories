@@ -157,7 +157,7 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.res),mcmc(m2.sub.res),mcmc(m3.sub.res)
 library(MCMCvis)
 
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="results/Fig.covariance_surv_repro",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro",wd="results/")
 
 pdf("results/FigS2.6b.pdf",width=6,height=7)
 
@@ -176,9 +176,9 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.sp),mcmc(m2.sub.sp),mcmc(m3.sub.sp)))
 
 #### species covariance: 
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="results/Fig.covariance_surv_repro_sp",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro_sp",wd="results/")
 
-pdf("~/FigS.2.6a.pdf",width=6,height=7)
+pdf("results/FigS.2.6a.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
 
