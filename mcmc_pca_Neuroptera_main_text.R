@@ -6,14 +6,17 @@
 #############################   Load necessary packages
 library(MCMCglmm)
 library(tidyr)
+library(dplyr)
 library(ggplot2)
 library(viridis)
 library(hdrcde)
+library(coda)
 
 ###########################   Data perparation 
 
-df=read.csv("LH_Neuroptera_red.csv")%>%
-  mutate(temp = as.numeric(temp),Dev_1st_inst = as.numeric(Dev_1st_inst),
+df=read.csv("data/LH_Neuroptera_red.csv")%>%
+  mutate(temp = as.numeric(temp),
+         Dev_1st_inst = as.numeric(Dev_1st_inst),
          Dev_2nd_inst = as.numeric(Dev_2nd_inst),
          Dev_3rd_inst = as.numeric(Dev_3rd_inst),
          Dev_.P = as.numeric(Dev_.P),
@@ -21,13 +24,17 @@ df=read.csv("LH_Neuroptera_red.csv")%>%
          M_sex_rep_rate_M = as.numeric(M_sex_rep_rate_M))
 
 # subset to the columns of interest
-sub_noNA=na.omit(df[,c(2,4,10,35:38,58,39)])
+sub_noNA=na.omit(df[,c('St_ID', 'sp.', 'vivo_situ', "Types_of_Lit_Sources", 'temp', 'Latitude', 
+                       'Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P', "L_surv", "M_sex_rep_rate_M")])
 
 # Values necessary to back-transform scaled temperatures for plotting
 mean.temp=25.1569
 sd.temp=3.571334
 
+
 sub_noNA$temp=as.numeric(scale(sub_noNA$temp))
+sub_noNA$Latitude=as.numeric(scale(abs(sub_noNA$Latitude)))
+
 
 sub_noNA=sub_noNA[sub_noNA$Dev_1st_inst>0,]
 sub_noNA=sub_noNA[sub_noNA$Dev_.P>0,]
@@ -37,7 +44,7 @@ sub_noNA$L_surv=asin(sqrt(sub_noNA$L_surv/100)) # arcsin transformation of survi
 
 nrow(sub_noNA) # final sample size
 
-sub_noNA[,4:8]=log(sub_noNA[,4:8])
+sub_noNA[,c(7:10,12)]=log(sub_noNA[,c(7:10,12)])
 
 sub_noNA$temp2=sub_noNA$temp^2
 
@@ -47,19 +54,18 @@ prior = list(R = list(V = diag(6)/7, n = 6, nu=0.002),
              G = list(G1 = list(V = diag(6)/7, n = 6, nu=0.002),
                       G2 = list(V = diag(2)/7, n = 6, nu=0.002)))
 
-m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2,
+m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2 , # + trait:Latitude,
             random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2,
+m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2, # + trait:Latitude,
             random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2,
+m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2, # + trait:Latitude,
             random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-library(coda)
 
 param.coda.fixed=mcmc.list(list(mcmc(m1$Sol),mcmc(m2$Sol),mcmc(m3$Sol)))
 
@@ -184,9 +190,9 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.res),mcmc(m2.sub.res),mcmc(m3.sub.res)
 
 library(MCMCvis)
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv+",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv+",wd="results/")
 
-pdf("~/Fig3b_main_text.pdf",width=6,height=7)
+pdf("results/Fig3b_main_text.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
 
@@ -208,9 +214,9 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.sp),mcmc(m2.sub.sp),mcmc(m3.sub.sp)))
 library(MCMCvis)
 
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv+_sp",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv+_sp",wd="results/")
 
-pdf("~/Fig3a_main_text.pdf",width=6,height=7)
+pdf("results/Fig3a_main_text.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
 
@@ -228,7 +234,7 @@ colnames(m1.sub)=colnames(m2.sub)=colnames(m3.sub)=c("1st - 1st instar","1st - 2
 
 param.coda.vcv=mcmc.list(list(mcmc(m1.sub),mcmc(m2.sub),mcmc(m3.sub)))
 
-pdf("~/cov_Pexplained.pdf",width=6,height=7)
+pdf("results/cov_Pexplained.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="% species-specific covariance",xlim = c(0,1))
 
@@ -344,4 +350,4 @@ PCbiplot <- function(PC, x="PC1", y="PC2") {
 comparison = PCbiplot(x)
 comparison
 
-
+ggsave(filename = "results/Fig4_main_text.pdf",plot=p.temp,width = 8,height = 10)
