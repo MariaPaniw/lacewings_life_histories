@@ -3,6 +3,8 @@
 # created by Maria Paniw
 # last modified: 04-11-2023
 
+set.seed(14052024)
+
 #############################   Load necessary packages
 library(MCMCglmm)
 library(tidyr)
@@ -128,7 +130,7 @@ levels(pred.data$stage) = c("D 1st instar","D 2nd instar", "D 3rd instar","D Pup
 
 df.obs <- sub_noNA %>%
   pivot_longer(
-    cols = "Dev_1st_inst":"L_surv",
+    cols = c("Dev_1st_inst","Dev_2nd_inst","Dev_3rd_inst","Dev_.P","M_sex_rep_rate_M","L_surv"),
     names_to = "stage",
     values_to = "dev"
   )
@@ -157,8 +159,7 @@ p.temp=ggplot(pred.data, aes(temp, dev))+
   xlab("Temperature (ºC)")+
   ylab("")+
   theme_bw(base_size = 18)+
-  theme(legend.position = "none",
-        legend.text = element_text(face = "italic",size=10))+
+  theme(legend.text = element_text(face = "italic",size=10))+
   theme(panel.grid = element_blank())+
   theme(plot.margin = unit(c(1,0.5,0.5,0.5), "cm"))+
   theme(strip.background =element_blank(),
@@ -351,3 +352,4 @@ comparison = PCbiplot(x)
 comparison
 
 ggsave(filename = "results/Fig4_main_text.pdf",plot=p.temp,width = 8,height = 10)
+ggsave(filename = "results/Fig4_main_text.png",plot=p.temp,width = 8,height = 10, dpi = 600)

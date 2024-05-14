@@ -3,6 +3,8 @@
 # created by Maria Paniw
 # last modified: 04-11-2023
 
+set.seed(14052024)
+
 #############################   Load necessary packages
 library(MCMCglmm)
 library(tidyr)

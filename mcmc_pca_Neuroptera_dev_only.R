@@ -3,6 +3,8 @@
 # created by Maria Paniw
 # last modified: 04-11-2023
 
+set.seed(14052024)
+
 #############################   Load necessary packages
 library(MCMCglmm)
 library(tidyr)
@@ -12,35 +14,36 @@ library(hdrcde)
 
 ###########################   Data perparation 
 
-df=read.csv("~/LH_Neuroptera.csv")
+df=read.csv("data/LH_Neuroptera_red.csv")
 
 # Values necessary to back-transform scaled temperatures for plotting
 mean.temp=24
 sd.temp=3.84
 
-sub_noNA=na.omit(df[,c(2,8,33:36)])
+sub_noNA=na.omit(df[,c('St_ID', 'sp.', 'vivo_situ', "Types_of_Lit_Sources", 'temp', 'Latitude', 'Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')])
 
 sub_noNA$temp=as.numeric(scale(sub_noNA$temp))
 
 sub_noNA=sub_noNA[sub_noNA$Dev_1st_inst>0,]
 sub_noNA=sub_noNA[sub_noNA$Dev_.P>0,]
-sub_noNA[,3:6]=log(sub_noNA[,3:6])
+sub_noNA[,c('Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')]=log(sub_noNA[,c('Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')])
 
 ###########################   MCMC analyses
 
 prior = list(R = list(V = diag(4)/5, n = 4, nu=0.002),
-             G = list(G1 = list(V = diag(4)/5, n = 4, nu=0.002)))
+             G = list(G1 = list(V = diag(4)/5, n = 4, nu=0.002),
+                      G2 = list(V = diag(2)/5, n = 4, nu=0.002)))
 
-m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
+m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp + trait:Latitude,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
+m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp + trait:Latitude,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
-m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp,
-            random = ~ us(trait):sp.,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
+m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp + trait:Latitude,
+            random = ~ us(trait):sp. + us(1 + temp):St_ID, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
             pr=F,thin=25, data = sub_noNA)
 
 library(coda)
@@ -148,9 +151,9 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.res),mcmc(m2.sub.res),mcmc(m3.sub.res)
 library(MCMCvis)
 
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_dev",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_dev",wd="results")
 
-pdf("~/FigS2.3b.pdf",width=6,height=7)
+pdf("results/FigS2.3b.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
 
@@ -170,9 +173,9 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.sp),mcmc(m2.sub.sp),mcmc(m3.sub.sp)))
 
 library(MCMCvis)
 
-MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_dev_sp",wd="~/plots/")
+MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_dev_sp",wd="results/")
 
-pdf("~/FigS.2.3a.pdf",width=6,height=7)
+pdf("results/FigS.2.3a.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
 
@@ -191,7 +194,7 @@ colnames(m1.sub)=colnames(m2.sub)=colnames(m3.sub)=c("1st - 1st instar","1st - 2
 
 param.coda.vcv=mcmc.list(list(mcmc(m1.sub),mcmc(m2.sub),mcmc(m3.sub)))
 
-pdf("~/cov_Pexplained_dev.pdf",width=6,height=7)
+pdf("results/cov_Pexplained_dev.pdf",width=6,height=7)
 
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="% species-specific covariance",xlim = c(0,1))
 
