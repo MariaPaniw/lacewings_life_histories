@@ -3,12 +3,15 @@
 # created by Maria Paniw, adapted by Sanne Evers
 # last modified: 08/05/2024
 
+set.seed(14052024)
+
 library(MCMCglmm)
 library(tidyr)
 library(dplyr)
 library(coda)
+library(ggplot2)
 
-df=read.csv("data/LH_Neuroptera_red.csv") %>%
+df=read.ggplot2df=read.csv("data/LH_Neuroptera_red.csv") %>%
   mutate(temp = as.numeric(temp),
          Dev_1st_inst = as.numeric(Dev_1st_inst),
          Dev_2nd_inst = as.numeric(Dev_2nd_inst),
@@ -130,5 +133,7 @@ p.temp=ggplot(pred.data, aes(temp, dev))+
 
 p.temp
 
-ggsave(filename = "results/plot_dev_in_vivo.pdf",plot=p.temp,width = 12,height = 6)
+ggsave(filename = "results/plot_dev_in_vivo.pdf",plot=p.temp,width = 12,height = 8)
+ggsave(filename = "results/plot_dev_in_vivo.png",plot=p.temp,width = 12,height = 8, dpi = 600)
+
 
