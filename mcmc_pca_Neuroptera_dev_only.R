@@ -154,9 +154,11 @@ library(MCMCvis)
 MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_dev",wd="results")
 
 pdf("results/FigS2.3b.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
+dev.off()
 
+png("results/FigS2.3b.png", width = 6, height = 7, units = "in", res = 400)
+MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
 dev.off()
 
 
@@ -176,9 +178,11 @@ library(MCMCvis)
 MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_dev_sp",wd="results/")
 
 pdf("results/FigS.2.3a.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
+dev.off()
 
+png("results/FigS2.3a.png", width = 6, height = 7, units = "in", res = 400)
+MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
 dev.off()
 
 
@@ -281,7 +285,7 @@ PCbiplot <- function(PC, x="PC1", y="PC2") {
   
   plot <- plot + geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2), arrow=arrow(length=unit(0.5,"cm")), size=1.2, color="grey50") 
   
-  plot<-plot + geom_text_repel(data=datapc, aes(x=v1, y=v2, label=LHTexpr), size = 5,  parse=F,color="black", point.padding = unit(1, 'lines'))
+  # plot<-plot + geom_text_repel(data=datapc, aes(x=v1, y=v2, label=LHTexpr), size = 5,  parse=F,color="black", point.padding = unit(1, 'lines'))
   
   plot <- plot+theme_bw()+theme(panel.grid = element_blank())+ylab(paste("PC 2 (",round(name2,2)*100,"%)",sep=""))+xlab(paste("PC 1 (",round(name1,2)*100,"%)",sep=""))
   plot<- plot+theme(axis.text = element_text(size=18,colour = "black"))+theme(axis.title = element_text(size=20))+theme(legend.text = element_text(size=20,colour = "black"),
@@ -296,3 +300,8 @@ PCbiplot <- function(PC, x="PC1", y="PC2") {
 
 comparison = PCbiplot(x)
 comparison # Fig. S2.4
+
+
+ggsave(filename = "results/PCA_dev_only.pdf",plot=comparison,width = 8,height = 10)
+ggsave(filename = "results/PCA_dev_only.png",plot=comparison, width = 15.2, height = 15.2, units = "cm", dpi = 600)
+

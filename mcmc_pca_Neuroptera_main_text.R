@@ -194,11 +194,12 @@ library(MCMCvis)
 MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv+",wd="results/")
 
 pdf("results/Fig3b_main_text.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
-
 dev.off()
 
+png("results/Fig3b_main_text.png",height = 17.7, width = 15.2, units = "cm", res = 600)
+MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
+dev.off()
 
 #### Species level covariance
 
@@ -218,10 +219,13 @@ library(MCMCvis)
 MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv+_sp",wd="results/")
 
 pdf("results/Fig3a_main_text.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
-
 dev.off()
+
+png("results/Fig3a_main_text.png",height=17.7, width=15.2, units = "cm", res = 600)
+MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
+dev.off()
+
 
 ###### Percent variance explained by species
 
@@ -236,9 +240,7 @@ colnames(m1.sub)=colnames(m2.sub)=colnames(m3.sub)=c("1st - 1st instar","1st - 2
 param.coda.vcv=mcmc.list(list(mcmc(m1.sub),mcmc(m2.sub),mcmc(m3.sub)))
 
 pdf("results/cov_Pexplained.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="% species-specific covariance",xlim = c(0,1))
-
 dev.off()
 
 
@@ -335,6 +337,7 @@ PCbiplot <- function(PC, x="PC1", y="PC2") {
   )
   
   plot <- plot + geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2), arrow=arrow(length=unit(0.5,"cm")), size=1.2, color="black") 
+  ## Comment out the line below if you want figure without labels for process in powerpoint
   plot<-plot + geom_text_repel(data=datapc, aes(x=v1, y=v2, label=LHTexpr), size = 5,  parse=F,color="black", point.padding = unit(1, 'lines'))
   
   plot <- plot+theme_bw()+theme(panel.grid = element_blank())+ylab(paste("PC 2 (",round(name2,2)*100,"%)",sep=""))+xlab(paste("PC 1 (",round(name1,2)*100,"%)",sep=""))
@@ -353,3 +356,8 @@ comparison
 
 ggsave(filename = "results/Fig4_main_text.pdf",plot=p.temp,width = 8,height = 10)
 ggsave(filename = "results/Fig4_main_text.png",plot=p.temp,width = 8,height = 10, dpi = 600)
+
+ggsave(filename = "results/PCA_Neuroptera_survival.pdf",plot=comparison,width = 8,height = 10)
+ggsave(filename = "results/PCA_Neuroptera_survival.png",plot=comparison, width = 15.2, height = 15.2, units = "cm", dpi = 600)
+
+
