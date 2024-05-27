@@ -3,6 +3,8 @@
 # created by Maria Paniw
 # last modified: 04-11-2023
 
+set.seed(14052024)
+
 #############################   Load necessary packages
 library(MCMCglmm)
 library(tidyr)
@@ -135,6 +137,7 @@ p.temp
 
 
 ggsave(filename = "results/plot_temp_resp_surv_only_V2.pdf",plot=p.temp,width = 12,height = 6)
+ggsave(filename = "results/plot_temp_resp_surv_only_V2.jpeg",plot=p.temp,width = 12,height = 6, dpi = 600)
 
 
 #covariance
@@ -160,9 +163,12 @@ library(MCMCvis)
 MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro",wd="results/")
 
 pdf("results/FigS2.6b.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
+dev.off()
 
+
+png("results/FigS.2.6b.png", width = 15, height = 10, units = "cm", res = 400)
+MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Residual covariance")
 dev.off()
 
 #### Species level covariance
@@ -179,10 +185,13 @@ param.coda.vcv=mcmc.list(list(mcmc(m1.sub.sp),mcmc(m2.sub.sp),mcmc(m3.sub.sp)))
 MCMCtrace(param.coda.vcv,pdf=T,filename="Fig.covariance_surv_repro_sp",wd="results/")
 
 pdf("results/FigS.2.6a.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
-
 dev.off()
+
+png("results/FigS.2.6a.png", width = 15, height = 10, units = "cm", res = 400)
+MCMCplot(param.coda.vcv,ref_ovl = T,xlab="Random species-specific covariance")
+dev.off()
+
 
 
 ###### Percent variance expalin by species
@@ -196,8 +205,9 @@ colnames(m1.sub)=colnames(m2.sub)=colnames(m3.sub)=c("S PA - S PA","S PA - Repro
 param.coda.vcv=mcmc.list(list(mcmc(m1.sub),mcmc(m2.sub),mcmc(m3.sub)))
 
 pdf("results/cov_Pexplained_surv_repro.pdf",width=6,height=7)
-
 MCMCplot(param.coda.vcv,ref_ovl = T,xlab="% species-specific covariance",xlim = c(0,1))
-
 dev.off()
 
+png("results/cov_Pexplained_surv_repro.png", width = 6, height = 7, units = "in", res = 400)
+MCMCplot(param.coda.vcv,ref_ovl = T,xlab="% species-specific covariance",xlim = c(0,1))
+dev.off()
