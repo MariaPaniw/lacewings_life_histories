@@ -16,7 +16,7 @@ library(coda)
 
 ###########################   Data perparation 
 
-df=read.csv("data/LH_Neuroptera_red.csv")%>%
+df=read.csv("LH_Neuroptera_red.csv")%>%
   mutate(temp = as.numeric(temp),
          Dev_1st_inst = as.numeric(Dev_1st_inst),
          Dev_2nd_inst = as.numeric(Dev_2nd_inst),
@@ -50,26 +50,27 @@ sub_noNA[,c(7:10,12)]=log(sub_noNA[,c(7:10,12)])
 
 sub_noNA$temp2=sub_noNA$temp^2
 
+sub_noNA$species_pub=as.factor(paste(sub_noNA$sp.,sub_noNA$St_ID))
 ###########################   MCMC analyses
 
 prior = list(R = list(V = diag(6)/7, n = 6, nu=0.002),
              G = list(G1 = list(V = diag(6)/7, n = 6, nu=0.002),
                       G2 = list(V = diag(2)/7, n = 6, nu=0.002)))
 
-m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2 , # + trait:Latitude,
-            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
-            pr=F,thin=25, data = sub_noNA)
+m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2 + trait:Latitude , 
+            random = ~ us(trait):species_pub + us(1 + temp):species_pub, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
+            pr=T,thin=25, data = sub_noNA)
 
-m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2, # + trait:Latitude,
-            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
-            pr=F,thin=25, data = sub_noNA)
+m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2 + trait:Latitude, 
+            random = ~ us(trait):species_pub + us(1 + temp):species_pub,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
+            pr=T,thin=25, data = sub_noNA)
 
-m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2, # + trait:Latitude,
-            random = ~ us(trait):sp. + us(1 + temp):St_ID,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
-            pr=F,thin=25, data = sub_noNA)
+m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P,M_sex_rep_rate_M,L_surv)~trait+trait:temp+trait:temp2 + trait:Latitude,
+            random = ~ us(trait):species_pub + us(1 + temp):species_pub,rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 6), nitt = 60000, burnin = 10000,
+            pr=T,thin=25, data = sub_noNA)
 
 
-param.coda.fixed=mcmc.list(list(mcmc(m1$Sol),mcmc(m2$Sol),mcmc(m3$Sol)))
+param.coda.fixed=mcmc.list(list(mcmc(m1$Sol[,1:24]),mcmc(m2$Sol[,1:24]),mcmc(m3$Sol[,1:24])))
 
 summary(param.coda.fixed)
 gelman.diag(param.coda.fixed,multivariate=F)
@@ -83,48 +84,124 @@ plot(param.coda.fixed,smooth=F) # The different colors indicate different chains
 out.mcmc=rbind(m1$Sol,m2$Sol,m3$Sol)
 
 temp.pred=seq(min(sub_noNA$temp),max(sub_noNA$temp),length.out=20)
-temp.pred2=temp.pred^2
 
-new.data_1=data.frame(temp=temp.pred,
-                      dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,7])*temp.pred+mean(out.mcmc[,13])*temp.pred2),
-                      LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,7],0.025)*temp.pred+quantile(out.mcmc[,13],0.025)*temp.pred2)),
-                      UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,7],0.975)*temp.pred+quantile(out.mcmc[,13],0.975)*temp.pred2)),
-                      stage="Dev_1st_inst")
-new.data_2=data.frame(temp=temp.pred,
-                      dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,2])+mean(out.mcmc[,8])*temp.pred+mean(out.mcmc[,14])*temp.pred2),
-                      LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,2],0.025)+quantile(out.mcmc[,8],0.025)*temp.pred+quantile(out.mcmc[,14],0.025)*temp.pred2)),
-                      UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,2],0.975)+quantile(out.mcmc[,8],0.975)*temp.pred+quantile(out.mcmc[,14],0.975)*temp.pred2)),
-                      stage="Dev_2nd_inst")
+new.data_1=expand.grid(temp=temp.pred,
+                       species = unique(sub_noNA$species_pub)) %>%
+  rowwise() %>%
+  mutate(temp2 = temp^2,
+    dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,7])*temp+mean(out.mcmc[,13])*temp2 + 
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][25:36], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,7],0.025)*temp+quantile(out.mcmc[,13],0.025)*temp2 + 
+                  quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][25:36], value = T)],0.025) +
+                  quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.025) +
+                  quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,7],0.975)*temp+quantile(out.mcmc[,13],0.975)*temp2 +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][25:36], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.975) * temp)),
+         stage="Dev_1st_inst")
 
-new.data_3=data.frame(temp=temp.pred,
-                      dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,3])+mean(out.mcmc[,9])*temp.pred+mean(out.mcmc[,15])*temp.pred2),
-                      LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,3],0.025)+quantile(out.mcmc[,9],0.025)*temp.pred+quantile(out.mcmc[,15],0.025)*temp.pred2)),
-                      UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,3],0.975)+quantile(out.mcmc[,9],0.975)*temp.pred+quantile(out.mcmc[,15],0.975)*temp.pred2)),
-                      stage="Dev_3rd_inst")
+new.data_2=expand.grid(temp=temp.pred,
+                       species = unique(sub_noNA$species_pub)) %>%
+  rowwise() %>%
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,2])+mean(out.mcmc[,8])*temp+mean(out.mcmc[,14])*temp2 + 
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][37:48], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,2],0.025)+quantile(out.mcmc[,8],0.025)*temp+quantile(out.mcmc[,14],0.025)*temp2 + 
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][37:48], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,2],0.025)+quantile(out.mcmc[,8],0.975)*temp+quantile(out.mcmc[,14],0.975)*temp2 +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][37:48], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.975) * temp)),
+         stage="Dev_2nd_inst")
 
-new.data_4=data.frame(temp=temp.pred,
-                      dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,4])+mean(out.mcmc[,10])*temp.pred+mean(out.mcmc[,16])*temp.pred2),
-                      LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,4],0.025)+quantile(out.mcmc[,10],0.025)*temp.pred+quantile(out.mcmc[,16],0.025)*temp.pred2)),
-                      UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,4],0.975)+quantile(out.mcmc[,10],0.975)*temp.pred+quantile(out.mcmc[,16],0.975)*temp.pred2)),
-                      stage="Dev_.P")
 
-new.data_5=data.frame(temp=temp.pred,
-                      dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,5])+mean(out.mcmc[,11])*temp.pred+mean(out.mcmc[,17])*temp.pred2),
-                      LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,5],0.025)+quantile(out.mcmc[,11],0.025)*temp.pred+quantile(out.mcmc[,17],0.025)*temp.pred2)),
-                      UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,5],0.975)+quantile(out.mcmc[,11],0.975)*temp.pred+quantile(out.mcmc[,17],0.975)*temp.pred2)),
-                      stage="M_sex_rep_rate_M")
+new.data_3=expand.grid(temp=temp.pred,
+                       species = unique(sub_noNA$species_pub)) %>%
+  rowwise() %>%
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,3])+mean(out.mcmc[,9])*temp+mean(out.mcmc[,15])*temp2 + 
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][49:60], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,3],0.025)+quantile(out.mcmc[,9],0.025)*temp+quantile(out.mcmc[,15],0.025)*temp2 + 
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][49:60], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,3],0.025)+quantile(out.mcmc[,9],0.975)*temp+quantile(out.mcmc[,15],0.975)*temp2 +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][49:60], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.975) * temp)),
+         stage="Dev_3rd_inst")
 
-new.data_6=data.frame(temp=temp.pred,
-                      dev=sin(mean(out.mcmc[,1])+mean(out.mcmc[,6])+mean(out.mcmc[,12])*temp.pred+mean(out.mcmc[,18])*temp.pred2)^2,
-                      LB=sin((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,6],0.025)+quantile(out.mcmc[,12],0.025)*temp.pred+quantile(out.mcmc[,18],0.025)*temp.pred2))^2,
-                      UB=sin((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,6],0.975)+quantile(out.mcmc[,12],0.975)*temp.pred+quantile(out.mcmc[,18],0.975)*temp.pred2))^2,
-                      stage="L_surv")
+new.data_4=expand.grid(temp=temp.pred,
+                       species = unique(sub_noNA$species_pub)) %>%
+  rowwise() %>%
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,4])+mean(out.mcmc[,10])*temp+mean(out.mcmc[,16])*temp2 + 
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][61:72], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,4],0.025)+quantile(out.mcmc[,10],0.025)*temp+quantile(out.mcmc[,16],0.025)*temp2 + 
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][61:72], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,4],0.025)+quantile(out.mcmc[,10],0.975)*temp+quantile(out.mcmc[,16],0.975)*temp2 +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][61:72], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.975) * temp)),
+         stage="Dev_.P")
+
+new.data_5=expand.grid(temp=temp.pred,
+                       species = unique(sub_noNA$species_pub)) %>%
+  rowwise() %>%
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,5])+mean(out.mcmc[,11])*temp+mean(out.mcmc[,17])*temp2 + 
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][73:84], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,5],0.025)+quantile(out.mcmc[,11],0.025)*temp+quantile(out.mcmc[,17],0.025)*temp2 + 
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][73:84], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,5],0.025)+quantile(out.mcmc[,11],0.975)*temp+quantile(out.mcmc[,17],0.975)*temp2 +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][73:84], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.975) * temp)),
+         stage="M_sex_rep_rate_M")
+
+new.data_6=expand.grid(temp=temp.pred,
+                       species = unique(sub_noNA$species_pub)) %>%
+  rowwise() %>%
+  mutate(temp2 = temp^2,
+         dev=sin(mean(out.mcmc[,1])+mean(out.mcmc[,6])+mean(out.mcmc[,12])*temp+mean(out.mcmc[,18])*temp2 + 
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][85:96], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)]) * temp),
+         LB=sin((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,6],0.025)+quantile(out.mcmc[,12],0.025)*temp+quantile(out.mcmc[,18],0.025)*temp2 + 
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][85:96], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.025) * temp)),
+         UB=sin((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,6],0.025)+quantile(out.mcmc[,12],0.975)*temp+quantile(out.mcmc[,18],0.975)*temp2 +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][85:96], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][97:108], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][109:120], value = T)],0.975) * temp)),
+         stage="L_surv")
+
 
 pred.data=rbind(new.data_1,new.data_2,new.data_3,new.data_4,new.data_5,new.data_6)
+
 
 pred.data$stage=factor(pred.data$stage,levels=c("Dev_1st_inst","Dev_2nd_inst","Dev_3rd_inst","Dev_.P","M_sex_rep_rate_M","L_surv"))
 
 levels(pred.data$stage) = c("D 1st instar","D 2nd instar", "D 3rd instar","D Pupae","# eggs/female", "S pupae-adult")
+
 
 #observed 
 
@@ -138,6 +215,7 @@ df.obs <- sub_noNA %>%
 df.obs$dev[!df.obs$stage%in%"L_surv"]=exp(df.obs$dev[!df.obs$stage%in%"L_surv"])
 df.obs$dev[df.obs$stage%in%"L_surv"]=sin(df.obs$dev[df.obs$stage%in%"L_surv"])^2
 
+df.obs$species=as.factor(paste(df.obs$sp.,df.obs$St_ID))
 
 df.obs$stage=factor(df.obs$stage,levels=c("Dev_1st_inst","Dev_2nd_inst","Dev_3rd_inst","Dev_.P","M_sex_rep_rate_M","L_surv"))
 
@@ -150,12 +228,26 @@ df.obs$sp.=gsub("_"," ", df.obs$sp.)
 pred.data$temp=pred.data$temp*sd.temp+mean.temp
 df.obs$temp=df.obs$temp*sd.temp+mean.temp
 
-# Figure 2 main text
-p.temp=ggplot(pred.data, aes(temp, dev))+
+# get only observed temp ranges
+
+range_df <- df.obs %>%
+  group_by(species) %>%
+  summarise(min_temp = min(temp) * 0.9,
+           max_temp = max(temp) * 1.1)
+
+pred.data1 <- pred.data %>% 
+  left_join(., range_df, by = "species") %>%
+  rowwise() %>%
+  filter(temp >= min_temp & temp <= max_temp)
+
+
+
+# Figure S3.2 main text
+p.temp=ggplot(pred.data1, aes(temp, dev))+
   facet_grid(stage~.,scales="free")+
-  geom_line() +
-  geom_point(data=df.obs,aes(temp, dev, col=sp.),size=2)+
-  geom_ribbon(aes(ymin = LB, ymax = UB),alpha=0.1,col=NA) +
+  geom_point(data=df.obs,aes(temp, dev, col=species),size=2, show.legend = FALSE)+
+  geom_ribbon(aes(ymin = LB, ymax = UB, fill = species),alpha=0.2) +
+  geom_line(aes(colour = species), show.legend = FALSE) +
   xlab("Temperature (ºC)")+
   ylab("")+
   theme_bw(base_size = 18)+
@@ -163,7 +255,8 @@ p.temp=ggplot(pred.data, aes(temp, dev))+
   theme(panel.grid = element_blank())+
   theme(plot.margin = unit(c(1,0.5,0.5,0.5), "cm"))+
   theme(strip.background =element_blank(),
-        strip.text =element_text(size=16))
+        strip.text =element_text(size=16)) +
+  guides(fill = guide_legend(title = "Species & Study ID", override.aes = list(alpha = 0.8)))
 
 p.temp
 
@@ -338,7 +431,7 @@ PCbiplot <- function(PC, x="PC1", y="PC2") {
   
   plot <- plot + geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2), arrow=arrow(length=unit(0.5,"cm")), size=1.2, color="black") 
   ## Comment out the line below if you want figure without labels for process in powerpoint
-  plot<-plot + geom_text_repel(data=datapc, aes(x=v1, y=v2, label=LHTexpr), size = 5,  parse=F,color="black", point.padding = unit(1, 'lines'))
+  # plot<-plot + geom_text_repel(data=datapc, aes(x=v1, y=v2, label=LHTexpr), size = 5,  parse=F,color="black", point.padding = unit(1, 'lines'))
   
   plot <- plot+theme_bw()+theme(panel.grid = element_blank())+ylab(paste("PC 2 (",round(name2,2)*100,"%)",sep=""))+xlab(paste("PC 1 (",round(name1,2)*100,"%)",sep=""))
   plot<- plot+theme(axis.text = element_text(size=18,colour = "black"))+theme(axis.title = element_text(size=20))+theme(legend.text = element_text(size=20,colour = "black"),
