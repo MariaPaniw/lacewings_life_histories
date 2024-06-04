@@ -1,4 +1,4 @@
-# Supporting Material S2
+# Supporting Material S3
 # Analyses for Comparative life-history responses of lacewings to changes in temperature
 # created by Maria Paniw
 # last modified: 04-11-2023
