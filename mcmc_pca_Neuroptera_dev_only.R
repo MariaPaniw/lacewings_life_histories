@@ -1,4 +1,4 @@
-# Supporting Material S2
+# Supporting Material S3
 # Analyses for Comparative life-history responses of lacewings to changes in temperature
 # created by Maria Paniw
 # last modified: 04-11-2023
@@ -287,20 +287,21 @@ dev.off()
 ### Get residuals
 
 temp.pred=sub_noNA$temp
+latitude=sub_noNA$Latitude
 
 new.data_1=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,5])$mode*temp.pred,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,5])$mode*temp.pred+hdr(out.mcmc[,9])$mode*latitude,
                       stage="Dev_1st_inst")
 new.data_2=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,2])$mode+hdr(out.mcmc[,6])$mode*temp.pred,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,2])$mode+hdr(out.mcmc[,6])$mode*temp.pred+hdr(out.mcmc[,10])$mode*latitude,
                       stage="Dev_2nd_inst")
 
 new.data_3=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,3])$mode+hdr(out.mcmc[,7])$mode*temp.pred,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,3])$mode+hdr(out.mcmc[,7])$mode*temp.pred+hdr(out.mcmc[,11])$mode*latitude,
                       stage="Dev_3rd_inst")
 
 new.data_4=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,4])$mode+hdr(out.mcmc[,8])$mode*temp.pred,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,4])$mode+hdr(out.mcmc[,8])$mode*temp.pred+hdr(out.mcmc[,12])$mode*latitude,
                       stage="Dev_.P")
 #Main PCA dataset
 predicted_data <- data.frame(
@@ -331,8 +332,9 @@ x$loadings <- rotatedLoadings[,1:2]
 colnames(x$loadings)=c("PC1", "PC2")
 
 
-name1=0.61
-name2=0.27
+name1=summary(results)$importance[2,1]
+name2=summary(results)$importance[2,2]
+
 
 # PLOT
 
