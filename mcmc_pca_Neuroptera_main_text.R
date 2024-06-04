@@ -343,28 +343,29 @@ dev.off()
 
 temp.pred=sub_noNA$temp
 temp.pred2=sub_noNA$temp2
+latitude=sub_noNA$Latitude
 
 new.data_1=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,7])$mode*temp.pred+hdr(out.mcmc[,13])$mode*temp.pred2,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,7])$mode*temp.pred+hdr(out.mcmc[,13])$mode*temp.pred2+hdr(out.mcmc[,19])$mode*latitude,
                       stage="Dev_1st_inst")
 new.data_2=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,2])$mode+hdr(out.mcmc[,8])$mode*temp.pred+hdr(out.mcmc[,14])$mode*temp.pred2,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,2])$mode+hdr(out.mcmc[,8])$mode*temp.pred+hdr(out.mcmc[,14])$mode*temp.pred2+hdr(out.mcmc[,20])$mode*latitude,
                       stage="Dev_2nd_inst")
 
 new.data_3=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,3])$mode+hdr(out.mcmc[,9])$mode*temp.pred+hdr(out.mcmc[,15])$mode*temp.pred2,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,3])$mode+hdr(out.mcmc[,9])$mode*temp.pred+hdr(out.mcmc[,15])$mode*temp.pred2+hdr(out.mcmc[,21])$mode*latitude,
                       stage="Dev_3rd_inst")
 
 new.data_4=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,4])$mode+hdr(out.mcmc[,10])$mode*temp.pred+hdr(out.mcmc[,16])$mode*temp.pred2,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,4])$mode+hdr(out.mcmc[,10])$mode*temp.pred+hdr(out.mcmc[,16])$mode*temp.pred2+hdr(out.mcmc[,22])$mode*latitude,
                       stage="Dev_.P")
 
 new.data_5=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,5])$mode+hdr(out.mcmc[,11])$mode*temp.pred+hdr(out.mcmc[,17])$mode*temp.pred2,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,5])$mode+hdr(out.mcmc[,11])$mode*temp.pred+hdr(out.mcmc[,17])$mode*temp.pred2+hdr(out.mcmc[,23])$mode*latitude,
                       stage="M_sex_rep_rate_M")
 
 new.data_6=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,6])$mode+hdr(out.mcmc[,12])$mode*temp.pred+hdr(out.mcmc[,18])$mode*temp.pred2,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,6])$mode+hdr(out.mcmc[,12])$mode*temp.pred+hdr(out.mcmc[,18])$mode*temp.pred2+hdr(out.mcmc[,24])$mode*latitude,
                       stage="L_surv")
 
 #Main PCA dataset
@@ -400,7 +401,10 @@ colnames(x$scores)=c("PC1", "PC2")
 x$loadings <- rotatedLoadings[,1:2]
 colnames(x$loadings)=c("PC1", "PC2")
 
-name1=0.539
+
+name1=summary(results)$importance[2,1]
+name2=summary(results)$importance[2,2]
+
 name2=0.225
 
 # PLOT
