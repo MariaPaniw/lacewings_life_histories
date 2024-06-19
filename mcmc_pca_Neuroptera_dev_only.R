@@ -11,6 +11,7 @@ library(tidyr)
 library(ggplot2)
 library(viridis)
 library(hdrcde)
+library(dplyr)
 
 ###########################   Data perparation 
 
@@ -28,6 +29,8 @@ sub_noNA=sub_noNA[sub_noNA$Dev_1st_inst>0,]
 sub_noNA=sub_noNA[sub_noNA$Dev_.P>0,]
 sub_noNA[,c('Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')]=log(sub_noNA[,c('Dev_1st_inst', 'Dev_2nd_inst', 'Dev_3rd_inst','Dev_.P')])
 
+sub_noNA$temp2=sub_noNA$temp^2
+
 sub_noNA$species_pub=as.factor(paste(sub_noNA$sp.,sub_noNA$St_ID))
 
 ###########################   MCMC analyses
@@ -36,15 +39,15 @@ prior = list(R = list(V = diag(4)/5, n = 4, nu=0.002),
              G = list(G1 = list(V = diag(4)/5, n = 4, nu=0.002),
                       G2 = list(V = diag(2)/5, n = 4, nu=0.002)))
 
-m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp + trait:Latitude,
+m1=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp +trait:temp2 + trait:Latitude,
             random = ~ us(trait):species_pub + us(1 + temp):species_pub, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
             pr=T,thin=25, data = sub_noNA)
 
-m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp + trait:Latitude,
+m2=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp +trait:temp2 + trait:Latitude,
             random = ~ us(trait):species_pub + us(1 + temp):species_pub, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
             pr=T,thin=25, data = sub_noNA)
 
-m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp + trait:Latitude,
+m3=MCMCglmm(cbind(Dev_1st_inst,Dev_2nd_inst,Dev_3rd_inst,Dev_.P)~trait+trait:temp +trait:temp2 + trait:Latitude,
             random =  ~ us(trait):species_pub + us(1 + temp):species_pub, rcov = ~us(trait):units,prior = prior, family = rep("gaussian", 4), nitt = 60000, burnin = 10000,
             pr=T,thin=25, data = sub_noNA)
 
@@ -68,71 +71,75 @@ temp.pred=seq(min(sub_noNA$temp),max(sub_noNA$temp),length.out=20)
 new.data_1=expand.grid(temp=temp.pred,
                        species = unique(sub_noNA$species_pub)) %>%
   rowwise() %>%
-  mutate(dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,5])*temp + 
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][13:37], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)]) * temp),
-         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,5],0.025)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][13:37], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.025) * temp)),
-         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,5],0.975)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][13:37], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.975) * temp)),
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,5])*temp +mean(out.mcmc[,9])*temp2+ 
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][17:41], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,5],0.025)*temp + quantile(out.mcmc[,9],0.025)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][17:41], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,5],0.975)*temp+ quantile(out.mcmc[,9],0.975)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][17:41], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.975) * temp)),
          stage="Dev_1st_inst")
   
 new.data_2=expand.grid(temp=temp.pred,
                        species = unique(sub_noNA$species_pub)) %>%
   rowwise() %>%
-  mutate(dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,2])+mean(out.mcmc[,6])*temp + 
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][38:62], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)]) * temp),
-         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,2],0.025)+quantile(out.mcmc[,6],0.025)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][38:62], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.025) * temp)),
-         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,2],0.025)+quantile(out.mcmc[,6],0.975)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][38:62], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.975) * temp)),
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,2])+mean(out.mcmc[,6])*temp +mean(out.mcmc[,10])*temp2+  
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][42:66], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,2],0.025)+quantile(out.mcmc[,6],0.025)*temp + quantile(out.mcmc[,10],0.025)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][42:66], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,2],0.025)+quantile(out.mcmc[,6],0.975)*temp + quantile(out.mcmc[,10],0.975)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][42:66], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.975) * temp)),
          stage="Dev_2nd_inst")
 
 new.data_3=expand.grid(temp=temp.pred,
                        species = unique(sub_noNA$species_pub)) %>%
   rowwise() %>%
-  mutate(dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,3])+mean(out.mcmc[,7])*temp + 
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][63:87], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)]) * temp),
-         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,3],0.025)+quantile(out.mcmc[,7],0.025)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][63:87], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.025) * temp)),
-         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,3],0.025)+quantile(out.mcmc[,7],0.975)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][63:87], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.975) * temp)),
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,3])+mean(out.mcmc[,7])*temp +mean(out.mcmc[,11])*temp2+  
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][67:91], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,3],0.025)+quantile(out.mcmc[,7],0.025)*temp + quantile(out.mcmc[,11],0.025)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][67:91], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,3],0.025)+quantile(out.mcmc[,7],0.975)*temp + quantile(out.mcmc[,11],0.975)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][67:91], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.975) * temp)),
          stage="Dev_3rd_inst")
-
 
 new.data_4=expand.grid(temp=temp.pred,
                        species = unique(sub_noNA$species_pub)) %>%
   rowwise() %>%
-  mutate(dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,4])+mean(out.mcmc[,8])*temp + 
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][88:112], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)]) +
-                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)]) * temp),
-         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,4],0.025)+quantile(out.mcmc[,8],0.025)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][88:112], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.025) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.025) * temp)),
-         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,4],0.025)+quantile(out.mcmc[,8],0.975)*temp+
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][88:112], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][113:137], value = T)],0.975) +
-                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][138:162], value = T)],0.975) * temp)),
+  mutate(temp2 = temp^2,
+         dev=exp(mean(out.mcmc[,1])+mean(out.mcmc[,4])+mean(out.mcmc[,8])*temp +mean(out.mcmc[,12])*temp2+  
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][92:116], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)]) +
+                   mean(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)]) * temp),
+         LB=exp((quantile(out.mcmc[,1],0.025)+quantile(out.mcmc[,4],0.025)+quantile(out.mcmc[,8],0.025)*temp + quantile(out.mcmc[,12],0.025)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][92:116], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.025) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.025) * temp)),
+         UB=exp((quantile(out.mcmc[,1],0.975)+quantile(out.mcmc[,4],0.025)+quantile(out.mcmc[,8],0.975)*temp + quantile(out.mcmc[,12],0.975)*temp2+
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][92:116], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][117:141], value = T)],0.975) +
+                   quantile(out.mcmc[, grep(pattern = species, attr(out.mcmc, which = "dimnames")[[2]][142:166], value = T)],0.975) * temp)),
          stage="Dev_.P")
+
 
 pred.data=rbind(new.data_1,new.data_2,new.data_3,new.data_4)
 
@@ -188,7 +195,7 @@ p.temp=ggplot(pred.data1, aes(temp, dev))+
   ylab("")+
   theme_bw(base_size = 18)+
   theme(legend.position = "bottom",
-        legend.title.position = "top",
+        # legend.title.position = "top",
         legend.title = element_text(hjust = 0.5),
         legend.text = element_text(face = "italic",size=10))+
   theme(panel.grid = element_blank())+
@@ -287,21 +294,22 @@ dev.off()
 ### Get residuals
 
 temp.pred=sub_noNA$temp
+temp.pred2=sub_noNA$temp2
 latitude=sub_noNA$Latitude
 
 new.data_1=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,5])$mode*temp.pred+hdr(out.mcmc[,9])$mode*latitude,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,5])$mode*temp.pred+hdr(out.mcmc[,9])$mode*temp.pred2+hdr(out.mcmc[,13])$mode*latitude,
                       stage="Dev_1st_inst")
 new.data_2=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,2])$mode+hdr(out.mcmc[,6])$mode*temp.pred+hdr(out.mcmc[,10])$mode*latitude,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,2])$mode+hdr(out.mcmc[,6])$mode*temp.pred+hdr(out.mcmc[,10])$mode*temp.pred2+hdr(out.mcmc[,14])$mode*latitude,
                       stage="Dev_2nd_inst")
 
 new.data_3=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,3])$mode+hdr(out.mcmc[,7])$mode*temp.pred+hdr(out.mcmc[,11])$mode*latitude,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,3])$mode+hdr(out.mcmc[,7])$mode*temp.pred+hdr(out.mcmc[,11])$mode*temp.pred2+hdr(out.mcmc[,15])$mode*latitude,
                       stage="Dev_3rd_inst")
 
 new.data_4=data.frame(temp=temp.pred,
-                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,4])$mode+hdr(out.mcmc[,8])$mode*temp.pred+hdr(out.mcmc[,12])$mode*latitude,
+                      dev=hdr(out.mcmc[,1])$mode+hdr(out.mcmc[,4])$mode+hdr(out.mcmc[,8])$mode*temp.pred+hdr(out.mcmc[,12])$mode*temp.pred2+hdr(out.mcmc[,16])$mode*latitude,
                       stage="Dev_.P")
 #Main PCA dataset
 predicted_data <- data.frame(
