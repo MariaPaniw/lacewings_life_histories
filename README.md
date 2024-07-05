@@ -55,7 +55,8 @@ SHARING/ACCESS INFORMATION
 5. Was data derived from another source? No
 
 6. Recommended citation for this dataset: 
-Serediuk, H., Jackson, J., Evers, S.M., Paniw, M. Data and Analyses from: Comparative life-history responses of lacewings to changes in temperature. Zenodo. xxxx
+Serediuk, H., Jackson, J., Evers, S.M., Paniw, M. Data and Analyses from: Comparative life-history responses of lacewings to changes in temperature. Zenodo. [![DOI](https://zenodo.org/badge/713908985.svg)](https://zenodo.org/doi/10.5281/zenodo.12654309)
+
 
 DATA & FILE OVERVIEW & WORKFLOW OF R SCRIPTS: 
 
